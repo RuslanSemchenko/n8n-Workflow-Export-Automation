@@ -1,0 +1,40 @@
+name: Export n8n Workflows
+
+on:
+  schedule:
+    - cron: '0 */4 * * *' # every 4 hours
+  workflow_dispatch:
+
+jobs:
+  export-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name "n8n-export-bot"
+          git config --global user.email "bot@example.com"
+
+      - name: Export n8n workflows
+        env:
+          N8N_API_URL: ${{ secrets.N8N_API_URL }}
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          bash ./export_n8n.sh
+
+      - name: Commit and push changes
+        run: |
+          git add funnels/
+          if ! git diff --cached --quiet; then
+            git commit -m "Automated n8n export $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+            git push
+          else
+            echo "No changes to commit"
+          fi
